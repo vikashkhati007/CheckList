@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import Head from 'next/head'
 import { Inter } from 'next/font/google'
-import { ipcRenderer } from 'electron'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -11,24 +10,19 @@ interface Todo {
   completed: boolean
 }
 
-export default function Home() {
+export default function TodoComponents() {
   const [todos, setTodos] = useState<Todo[]>([])
   const [newTodo, setNewTodo] = useState('')
 
   useEffect(() => {
-    // Load todos from electron store on component mount
-    ipcRenderer.send('load-todos')
-    ipcRenderer.on('todos-loaded', (_, loadedTodos) => {
-      setTodos(loadedTodos)
-    })
-
-    return () => {
-      ipcRenderer.removeAllListeners('todos-loaded')
+    const storedTodos = localStorage.getItem('todos')
+    if (storedTodos) {
+      setTodos(JSON.parse(storedTodos))
     }
   }, [])
 
   const saveTodos = (updatedTodos: Todo[]) => {
-    ipcRenderer.send('save-todos', updatedTodos)
+    localStorage.setItem('todos', JSON.stringify(updatedTodos))
   }
 
   const addTodo = (e: React.FormEvent) => {
@@ -58,52 +52,50 @@ export default function Home() {
   return (
     <React.Fragment>
       <Head>
-        <title>Professional Todo App</title>
+        <title>Todo App</title>
       </Head>
-      <div className={`min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 py-12 px-4 ${inter.className}`}>
-        <div className="max-w-md mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
-          <div className="px-6 py-8">
-            <h1 className="text-3xl font-extrabold text-center text-gray-900 mb-8">Professional Todo App</h1>
-            <form onSubmit={addTodo} className="mb-6">
-              <div className="flex items-center border-b-2 border-indigo-500 py-2">
+      <div className={`todo-container ${inter.className}`}>
+        <div className="todo-card">
+          <div className="todo-content">
+            <h1 className="todo-title">Add Your Todos</h1>
+            <form onSubmit={addTodo} className="todo-form">
+              <div className="todo-input-container">
                 <input
                   type="text"
                   value={newTodo}
                   onChange={(e) => setNewTodo(e.target.value)}
                   placeholder="Add a new task"
-                  className="appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none"
+                  className="todo-input"
                 />
                 <button
                   type="submit"
-                  className="flex-shrink-0 bg-indigo-500 hover:bg-indigo-600 border-indigo-500 hover:border-indigo-600 text-sm border-4 text-white py-1 px-4 rounded-full transition duration-150 ease-in-out"
+                  className="todo-submit"
                 >
                   Add Task
                 </button>
               </div>
             </form>
-            <ul className="divide-y divide-gray-200">
+            <ul className="todo-list">
               {todos.map(todo => (
-                <li key={todo.id} className="py-4 flex items-center justify-between group">
-                  <div className="flex items-center">
+                <li key={todo.id} className="todo-item">
+                  <div>
                     <input
                       type="checkbox"
                       id={`todo-${todo.id}`}
                       checked={todo.completed}
                       onChange={() => toggleTodo(todo.id)}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      className="todo-checkbox"
                     />
                     <label
                       htmlFor={`todo-${todo.id}`}
-                      className={`ml-3 block text-sm font-medium ${
-                        todo.completed ? 'text-gray-400 line-through' : 'text-gray-700'
-                      }`}
+                      className={`todo-label ${todo.completed ? 'todo-completed' : ''}`}
                     >
                       {todo.text}
                     </label>
                   </div>
                   <button
                     onClick={() => deleteTodo(todo.id)}
-                    className="ml-2 text-sm font-medium text-red-500 hover:text-red-600 transition duration-150 ease-in-out opacity-0 group-hover:opacity-100"
+                    className="todo-delete"
                   >
                     Delete
                   </button>

@@ -1,9 +1,9 @@
+import path from 'path'
 import { app, ipcMain } from 'electron'
 import serve from 'electron-serve'
 import { createWindow } from './helpers'
-import Store from 'electron-store'
 
-const isProd: boolean = process.env.NODE_ENV === 'production'
+const isProd = process.env.NODE_ENV === 'production'
 
 if (isProd) {
   serve({ directory: 'app' })
@@ -11,18 +11,19 @@ if (isProd) {
   app.setPath('userData', `${app.getPath('userData')} (development)`)
 }
 
-const store = new Store()
-
 ;(async () => {
   await app.whenReady()
 
   const mainWindow = createWindow('main', {
     width: 1000,
     height: 600,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+    },
   })
 
   if (isProd) {
-    await mainWindow.loadURL('app://./home.html')
+    await mainWindow.loadURL('app://./home')
   } else {
     const port = process.argv[2]
     await mainWindow.loadURL(`http://localhost:${port}/home`)
@@ -34,11 +35,6 @@ app.on('window-all-closed', () => {
   app.quit()
 })
 
-ipcMain.on('load-todos', (event) => {
-  const todos = store.get('todos', [])
-  event.reply('todos-loaded', todos)
-})
-
-ipcMain.on('save-todos', (_, todos) => {
-  store.set('todos', todos)
+ipcMain.on('message', async (event, arg) => {
+  event.reply('message', `${arg} World!`)
 })
