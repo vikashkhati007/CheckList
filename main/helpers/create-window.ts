@@ -3,6 +3,7 @@ import {
   BrowserWindow,
   BrowserWindowConstructorOptions,
   Rectangle,
+  Menu,
 } from 'electron'
 import Store from 'electron-store'
 
@@ -78,7 +79,9 @@ export const createWindow = (
       contextIsolation: true,
       ...options.webPreferences,
     },
+    // autoHideMenuBar: true
   })
+  Menu.setApplicationMenu(null);
 
   win.on('close', saveState)
 

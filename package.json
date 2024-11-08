@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "nextron",
     "build": "nextron build",
+    "build:win": "nextron build --win --x64 --config electron-builder.yml",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
