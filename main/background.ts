@@ -2,7 +2,7 @@ import path from 'path'
 import { app, ipcMain } from 'electron'
 import serve from 'electron-serve'
 import { createWindow } from './helpers'
-import { saveTasks, loadTasks } from './electron-store'
+import { saveData, loadData } from './electron-store'
 
 const isProd = process.env.NODE_ENV === 'production'
 
@@ -31,13 +31,13 @@ if (isProd) {
     mainWindow.webContents.openDevTools()
   }
 
-  // Add IPC handlers for saving and loading tasks
-  ipcMain.handle('save-tasks', (event, tasks) => {
-    saveTasks(tasks)
+  // Add IPC handlers for saving and loading data
+  ipcMain.handle('save-data', (event, data) => {
+    saveData(data)
   })
 
-  ipcMain.handle('load-tasks', () => {
-    return loadTasks()
+  ipcMain.handle('load-data', () => {
+    return loadData()
   })
 })()
 

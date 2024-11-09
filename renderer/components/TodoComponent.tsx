@@ -7,20 +7,19 @@ import { ScrollArea } from "./ui/scrollarea"
 import { Checkbox } from "./ui/checkbox"
 import { Input } from "./ui/input"
 import {
-  Book,
-  Car,
-  ChevronDown,
-  Command,
   Home,
   MoreVertical,
   Plus,
-  User,
+  ChevronDown,
   Briefcase,
+  Book,
+  Car,
+  User,
   Utensils,
 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
-import { Label } from './ui/label'
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
+import { Label } from "./ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 interface Task {
   id: string
   title: string
@@ -31,75 +30,58 @@ interface Task {
   members?: string[]
 }
 
-interface List {
+interface PrivateGroup {
   id: string
   name: string
-  icon: React.ReactNode
-  count: number
-}
-
-interface Group {
-  id: string
-  name: string
-  members: number
-  avatars: string[]
+  iconName: string
+  tasks: Task[]
 }
 
 declare global {
   interface Window {
     electron: {
-      saveTasks: (tasks: Task[]) => void
-      loadTasks: () => Promise<Task[]>
+      saveData: (data: { privateGroups: PrivateGroup[] }) => void
+      loadData: () => Promise<{ privateGroups: PrivateGroup[] }>
     }
   }
 }
 
 export default function Component() {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [privateGroups, setPrivateGroups] = useState<PrivateGroup[]>([
+    { id: '1', name: 'Home', iconName: 'Home', tasks: [] }
+  ])
+  const [selectedGroupId, setSelectedGroupId] = useState('1')
+  const [newGroupName, setNewGroupName] = useState('')
+  const [newGroupIcon, setNewGroupIcon] = useState('Home')
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskTime, setNewTaskTime] = useState('')
 
   useEffect(() => {
-    const loadTasks = async () => {
-      const loadedTasks = await window.electron.loadTasks()
-      setTasks(loadedTasks)
+    const loadData = async () => {
+      const loadedData = await window.electron.loadData()
+      if (loadedData.privateGroups.length > 0) {
+        setPrivateGroups(loadedData.privateGroups)
+      }
     }
-    loadTasks()
+    loadData()
   }, [])
 
   useEffect(() => {
-    window.electron.saveTasks(tasks)
-  }, [tasks])
+    window.electron.saveData({ privateGroups })
+  }, [privateGroups])
 
-  const lists: List[] = [
-    { id: '1', name: 'Home', icon: <Home className="w-4 h-4" />, count: 8 },
-    { id: '2', name: 'Completed', icon: <Command className="w-4 h-4" />, count: 16 },
-    { id: '3', name: 'Personal', icon: <User className="w-4 h-4" />, count: 4 },
-    { id: '4', name: 'Work', icon: <Briefcase className="w-4 h-4" />, count: 6 },
-    { id: '5', name: 'Diet', icon: <Utensils className="w-4 h-4" />, count: 3 },
-    { id: '6', name: 'List of Book', icon: <Book className="w-4 h-4" />, count: 8 },
-    { id: '7', name: 'Road trip list', icon: <Car className="w-4 h-4" />, count: 6 },
-  ]
-
-  const groups: Group[] = [
-    {
-      id: '1',
-      name: 'Mobal Project',
-      members: 5,
-      avatars: ['/placeholder.svg', '/placeholder.svg', '/placeholder.svg', '/placeholder.svg', '/placeholder.svg'],
-    },
-    {
-      id: '2',
-      name: 'Futur Project',
-      members: 4,
-      avatars: ['/placeholder.svg', '/placeholder.svg', '/placeholder.svg', '/placeholder.svg'],
-    },
-  ]
-
-  const toggleTask = (taskId: string) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    ))
+  const addPrivateGroup = () => {
+    if (newGroupName.trim() !== '') {
+      const newGroup: PrivateGroup = {
+        id: Date.now().toString(),
+        name: newGroupName,
+        iconName: newGroupIcon,
+        tasks: []
+      }
+      setPrivateGroups([...privateGroups, newGroup])
+      setNewGroupName('')
+      setNewGroupIcon('Home')
+    }
   }
 
   const addTask = () => {
@@ -110,11 +92,42 @@ export default function Component() {
         completed: false,
         time: newTaskTime,
       }
-      setTasks([...tasks, newTask])
+      setPrivateGroups(privateGroups.map(group => 
+        group.id === selectedGroupId 
+          ? { ...group, tasks: [...group.tasks, newTask] }
+          : group
+      ))
       setNewTaskTitle('')
       setNewTaskTime('')
     }
   }
+
+  const toggleTask = (taskId: string) => {
+    setPrivateGroups(privateGroups.map(group => 
+      group.id === selectedGroupId
+        ? {
+            ...group,
+            tasks: group.tasks.map(task => 
+              task.id === taskId ? { ...task, completed: !task.completed } : task
+            )
+          }
+        : group
+    ))
+  }
+
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'Home': return <Home className="w-4 h-4" />;
+      case 'Briefcase': return <Briefcase className="w-4 h-4" />;
+      case 'Book': return <Book className="w-4 h-4" />;
+      case 'Car': return <Car className="w-4 h-4" />;
+      case 'User': return <User className="w-4 h-4" />;
+      case 'Utensils': return <Utensils className="w-4 h-4" />;
+      default: return <Home className="w-4 h-4" />;
+    }
+  }
+
+  const selectedGroup = privateGroups.find(group => group.id === selectedGroupId) || privateGroups[0]
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -129,46 +142,67 @@ export default function Component() {
       <div className="w-64 border-r bg-background p-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold">Private</h2>
-          <Button variant="ghost" size="icon">
-            <Plus className="h-4 w-4" />
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Private Group</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="group-name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="group-name"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="group-icon" className="text-right">
+                    Icon
+                  </Label>
+                  <Select onValueChange={(value) => setNewGroupIcon(value)} defaultValue="Home">
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select an icon" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Home">Home</SelectItem>
+                      <SelectItem value="Briefcase">Briefcase</SelectItem>
+                      <SelectItem value="Book">Book</SelectItem>
+                      <SelectItem value="Car">Car</SelectItem>
+                      <SelectItem value="User">User</SelectItem>
+                      <SelectItem value="Utensils">Utensils</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button onClick={addPrivateGroup}>Add Group</Button>
+            </DialogContent>
+          </Dialog>
         </div>
         
         <ScrollArea className="h-[calc(100vh-8rem)]">
-          {/* Lists */}
+          {/* Private Groups */}
           <div className="space-y-1">
-            {lists.map(list => (
+            {privateGroups.map(group => (
               <Button
-                key={list.id}
-                variant="ghost"
+                key={group.id}
+                variant={group.id === selectedGroupId ? "secondary" : "ghost"}
                 className="w-full justify-start gap-2"
+                onClick={() => setSelectedGroupId(group.id)}
               >
-                {list.icon}
-                <span>{list.name}</span>
-                <span className="ml-auto text-muted-foreground">{list.count}</span>
+                {getIconComponent(group.iconName)}
+                <span>{group.name}</span>
+                <span className="ml-auto text-muted-foreground">{group.tasks.length}</span>
               </Button>
             ))}
-          </div>
-
-          {/* Groups */}
-          <div className="mt-8">
-            <h2 className="text-lg font-semibold mb-4">Group</h2>
-            <div className="space-y-4">
-              {groups.map(group => (
-                <div key={group.id} className="p-4 rounded-lg bg-muted">
-                  <h3 className="font-medium mb-2">{group.name}</h3>
-                  <div className="flex -space-x-2">
-                    {group.avatars.map((avatar, i) => (
-                      <Avatar key={i} className="border-2 border-background w-8 h-8">
-                        <AvatarImage src={avatar} />
-                        <AvatarFallback>U{i}</AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-2">{group.members} People</p>
-                </div>
-              ))}
-            </div>
           </div>
         </ScrollArea>
       </div>
@@ -189,7 +223,7 @@ export default function Component() {
 
           {/* Tasks */}
           <div className="space-y-4">
-            {tasks.map(task => (
+            {selectedGroup.tasks.map(task => (
               <div
                 key={task.id}
                 className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
@@ -234,7 +268,7 @@ export default function Component() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Task</DialogTitle>
+                <DialogTitle>Add New Task to {selectedGroup.name}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">

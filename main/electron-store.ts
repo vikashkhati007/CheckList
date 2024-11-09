@@ -2,10 +2,11 @@ import Store from "electron-store";
 
 const store = new Store();
 
-export const saveTasks = (tasks) => {
-  store.set('tasks', tasks);
+export const saveData = (data) => {
+    store.set('data', data);
 };
 
-export const loadTasks = () => {
-  return store.get('tasks', []);
+export const loadData = () => {
+  return store.get('data', { privateGroups: [] });
 };
+

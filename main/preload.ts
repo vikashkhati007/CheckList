@@ -16,9 +16,10 @@ const handler = {
 }
 
 contextBridge.exposeInMainWorld('electron', {
-  saveTasks: (tasks: any) => ipcRenderer.invoke('save-tasks', tasks),
-  loadTasks: () => ipcRenderer.invoke('load-tasks'),
+  saveData: (data) => ipcRenderer.invoke('save-data', data),
+  loadData: () => ipcRenderer.invoke('load-data'),
 })
+
 
 contextBridge.exposeInMainWorld('ipc', handler)
 
