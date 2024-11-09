@@ -20,6 +20,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+
 interface Task {
   id: string
   title: string
@@ -46,6 +47,7 @@ declare global {
   }
 }
 
+
 export default function Component() {
   const [privateGroups, setPrivateGroups] = useState<PrivateGroup[]>([
     { id: '1', name: 'Home', iconName: 'Home', tasks: [] }
@@ -55,6 +57,7 @@ export default function Component() {
   const [newGroupIcon, setNewGroupIcon] = useState('Home')
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskTime, setNewTaskTime] = useState('')
+  const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -99,6 +102,7 @@ export default function Component() {
       ))
       setNewTaskTitle('')
       setNewTaskTime('')
+      setIsAddTaskDialogOpen(false) // Close the dialog
     }
   }
 
@@ -259,9 +263,13 @@ export default function Component() {
           </div>
 
           {/* Create New Task Button */}
-          <Dialog>
+          <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full px-8" variant="default">
+              <Button 
+                className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full px-8" 
+                variant="default"
+                onClick={() => setIsAddTaskDialogOpen(true)}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Create new task
               </Button>
