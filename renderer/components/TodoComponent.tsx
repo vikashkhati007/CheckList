@@ -20,6 +20,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import TimePickerComponent from './TimePicker'
 
 interface Task {
   id: string
@@ -242,13 +243,9 @@ export default function Component() {
         <div className="p-8">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-2xl font-bold mb-1">Good Morning, Sullivan! 👋</h1>
+              <h1 className="text-2xl font-bold mb-1">Good Morning, Vikas! 👋</h1>
               <p className="text-muted-foreground">Today, {currentDate}</p>
             </div>
-            <Button variant="outline">
-              Today
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
           </div>
 
           {/* Tasks */}
@@ -319,18 +316,17 @@ export default function Component() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="task-time" className="text-right">
-                    Time
-                  </Label>
-                  <Input
-                    id="task-time"
-                    value={newTaskTime}
-                    onChange={(e) => setNewTaskTime(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g., 09:00 - 10:00"
-                  />
-                </div>
-              </div>
+                        <Label htmlFor="task-time" className="text-right">
+                          Time
+                        </Label>
+                        <div className="col-span-3">
+                          <TimePickerComponent
+                            onTimeSelect={(time) => setNewTaskTime(time)}
+                            defaultValue={newTaskTime}
+                          />
+                        </div>
+                      </div>
+                  </div>
               <Button onClick={addTask}>Add Task</Button>
             </DialogContent>
           </Dialog>
