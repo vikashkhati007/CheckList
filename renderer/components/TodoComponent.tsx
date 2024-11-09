@@ -8,7 +8,6 @@ import { Checkbox } from "./ui/checkbox"
 import { Input } from "./ui/input"
 import {
   Home,
-  MoreVertical,
   Plus,
   ChevronDown,
   Briefcase,
@@ -16,6 +15,7 @@ import {
   Car,
   User,
   Utensils,
+  Trash2,
 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Label } from "./ui/label"
@@ -46,7 +46,6 @@ declare global {
     }
   }
 }
-
 
 export default function Component() {
   const [privateGroups, setPrivateGroups] = useState<PrivateGroup[]>([
@@ -87,6 +86,13 @@ export default function Component() {
     }
   }
 
+  const deletePrivateGroup = (groupId: string) => {
+    setPrivateGroups(privateGroups.filter(group => group.id !== groupId))
+    if (selectedGroupId === groupId) {
+      setSelectedGroupId(privateGroups[0].id)
+    }
+  }
+
   const addTask = () => {
     if (newTaskTitle.trim() !== '' && newTaskTime.trim() !== '') {
       const newTask: Task = {
@@ -102,7 +108,7 @@ export default function Component() {
       ))
       setNewTaskTitle('')
       setNewTaskTime('')
-      setIsAddTaskDialogOpen(false) // Close the dialog
+      setIsAddTaskDialogOpen(false)
     }
   }
 
@@ -114,6 +120,17 @@ export default function Component() {
             tasks: group.tasks.map(task => 
               task.id === taskId ? { ...task, completed: !task.completed } : task
             )
+          }
+        : group
+    ))
+  }
+
+  const deleteTask = (taskId: string) => {
+    setPrivateGroups(privateGroups.map(group => 
+      group.id === selectedGroupId
+        ? {
+            ...group,
+            tasks: group.tasks.filter(task => task.id !== taskId)
           }
         : group
     ))
@@ -196,16 +213,25 @@ export default function Component() {
           {/* Private Groups */}
           <div className="space-y-1">
             {privateGroups.map(group => (
-              <Button
-                key={group.id}
-                variant={group.id === selectedGroupId ? "secondary" : "ghost"}
-                className="w-full justify-start gap-2"
-                onClick={() => setSelectedGroupId(group.id)}
-              >
-                {getIconComponent(group.iconName)}
-                <span>{group.name}</span>
-                <span className="ml-auto text-muted-foreground">{group.tasks.length}</span>
-              </Button>
+              <div key={group.id} className="flex items-center">
+                <Button
+                  variant={group.id === selectedGroupId ? "secondary" : "ghost"}
+                  className="w-full justify-start gap-2"
+                  onClick={() => setSelectedGroupId(group.id)}
+                >
+                  {getIconComponent(group.iconName)}
+                  <span>{group.name}</span>
+                  <span className="ml-auto text-muted-foreground">{group.tasks.length}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => deletePrivateGroup(group.id)}
+                  className="ml-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             ))}
           </div>
         </ScrollArea>
@@ -237,7 +263,9 @@ export default function Component() {
                   onCheckedChange={() => toggleTask(task.id)}
                 />
                 <div className="flex-1">
-                  <h3 className="font-medium">{task.title}</h3>
+                  <h3 className={`font-medium transition-all duration-300 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                    {task.title}
+                  </h3>
                   {task.tag && (
                     <div className="flex gap-2 mt-1">
                       <span className="text-sm text-blue-500">{task.tag}</span>
@@ -255,8 +283,8 @@ export default function Component() {
                   </div>
                 )}
                 <div className="text-sm text-muted-foreground">{task.time}</div>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
+                <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}
