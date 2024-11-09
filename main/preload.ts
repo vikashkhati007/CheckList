@@ -15,6 +15,11 @@ const handler = {
   },
 }
 
+contextBridge.exposeInMainWorld('electron', {
+  saveTasks: (tasks: any) => ipcRenderer.invoke('save-tasks', tasks),
+  loadTasks: () => ipcRenderer.invoke('load-tasks'),
+})
+
 contextBridge.exposeInMainWorld('ipc', handler)
 
 export type IpcHandler = typeof handler

@@ -1,6 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { Button } from "./ui/button"
+import { ScrollArea } from "./ui/scrollarea"
+import { Checkbox } from "./ui/checkbox"
+import { Input } from "./ui/input"
 import {
   Book,
   Car,
@@ -13,10 +18,8 @@ import {
   Briefcase,
   Utensils,
 } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { Button } from './ui/button'
-import { ScrollArea } from './ui/scrollarea'
-import { Checkbox } from './ui/checkbox'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
+import { Label } from './ui/label'
 
 interface Task {
   id: string
@@ -42,36 +45,31 @@ interface Group {
   avatars: string[]
 }
 
+declare global {
+  interface Window {
+    electron: {
+      saveTasks: (tasks: Task[]) => void
+      loadTasks: () => Promise<Task[]>
+    }
+  }
+}
+
 export default function Component() {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: '1',
-      title: 'Jogging',
-      completed: false,
-      time: '06:00 - 07:30',
-    },
-    {
-      id: '2',
-      title: 'Read a book',
-      completed: false,
-      time: '08:00 - 09:00',
-    },
-    {
-      id: '3',
-      title: 'Wireframing new product',
-      completed: false,
-      time: '09:00 - 11:00',
-    },
-    {
-      id: '4',
-      title: 'Moodboard Landing Page',
-      completed: false,
-      time: '11:00 - 13:00',
-      project: 'Mobal Project',
-      tag: '#MobalProject',
-      members: ['1', '2', '3'],
-    },
-  ])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [newTaskTime, setNewTaskTime] = useState('')
+
+  useEffect(() => {
+    const loadTasks = async () => {
+      const loadedTasks = await window.electron.loadTasks()
+      setTasks(loadedTasks)
+    }
+    loadTasks()
+  }, [])
+
+  useEffect(() => {
+    window.electron.saveTasks(tasks)
+  }, [tasks])
 
   const lists: List[] = [
     { id: '1', name: 'Home', icon: <Home className="w-4 h-4" />, count: 8 },
@@ -102,6 +100,20 @@ export default function Component() {
     setTasks(tasks.map(task => 
       task.id === taskId ? { ...task, completed: !task.completed } : task
     ))
+  }
+
+  const addTask = () => {
+    if (newTaskTitle.trim() !== '' && newTaskTime.trim() !== '') {
+      const newTask: Task = {
+        id: Date.now().toString(),
+        title: newTaskTitle,
+        completed: false,
+        time: newTaskTime,
+      }
+      setTasks([...tasks, newTask])
+      setNewTaskTitle('')
+      setNewTaskTime('')
+    }
   }
 
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -213,12 +225,45 @@ export default function Component() {
           </div>
 
           {/* Create New Task Button */}
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2">
-            <Button className="rounded-full px-8" variant="default">
-              <Plus className="mr-2 h-4 w-4" />
-              Create new task
-            </Button>
-          </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full px-8" variant="default">
+                <Plus className="mr-2 h-4 w-4" />
+                Create new task
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Task</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="task-title" className="text-right">
+                    Title
+                  </Label>
+                  <Input
+                    id="task-title"
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="task-time" className="text-right">
+                    Time
+                  </Label>
+                  <Input
+                    id="task-time"
+                    value={newTaskTime}
+                    onChange={(e) => setNewTaskTime(e.target.value)}
+                    className="col-span-3"
+                    placeholder="e.g., 09:00 - 10:00"
+                  />
+                </div>
+              </div>
+              <Button onClick={addTask}>Add Task</Button>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
