@@ -315,18 +315,20 @@ export default function Component() {
                     className="col-span-3"
                   />
                 </div>
+
                 <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="task-time" className="text-right">
-                          Time
-                        </Label>
-                        <div className="col-span-3">
-                          <TimePickerComponent
-                            onTimeSelect={(time) => setNewTaskTime(time)}
-                            defaultValue={newTaskTime}
-                          />
-                        </div>
-                      </div>
+                <Label htmlFor="task-time" className="text-right">
+    Time
+  </Label>
+  <div className="col-span-3">
+    <TimePickerComponent
+      onTimeSelect={(time) => setNewTaskTime(time)}
+      defaultValue={newTaskTime}
+    />
+  </div>
+                   </div>
                   </div>
+
               <Button onClick={addTask}>Add Task</Button>
             </DialogContent>
           </Dialog>
