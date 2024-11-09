@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import * as React from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import { Button } from "./ui/button"
 import { ScrollArea } from "./ui/scrollarea"
@@ -9,7 +9,8 @@ import { Input } from "./ui/input"
 import {
   Home,
   Plus,
-  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Briefcase,
   Book,
   Car,
@@ -39,6 +40,11 @@ interface PrivateGroup {
   tasks: Task[]
 }
 
+interface TimePickerProps {
+  onTimeSelect: (time: string) => void
+  defaultValue?: string
+}
+
 declare global {
   interface Window {
     electron: {
@@ -48,32 +54,50 @@ declare global {
   }
 }
 
+
 export default function Component() {
-  const [privateGroups, setPrivateGroups] = useState<PrivateGroup[]>([
+  const [privateGroups, setPrivateGroups] = React.useState<PrivateGroup[]>([
     { id: '1', name: 'Home', iconName: 'Home', tasks: [] }
   ])
-  const [selectedGroupId, setSelectedGroupId] = useState('1')
-  const [newGroupName, setNewGroupName] = useState('')
-  const [newGroupIcon, setNewGroupIcon] = useState('Home')
-  const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [newTaskTime, setNewTaskTime] = useState('')
-  const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false)
+  const [selectedGroupId, setSelectedGroupId] = React.useState('1')
+  const [newGroupName, setNewGroupName] = React.useState('')
+  const [newGroupIcon, setNewGroupIcon] = React.useState('Home')
+  const [newTaskTitle, setNewTaskTitle] = React.useState('')
+  const [newTaskTime, setNewTaskTime] = React.useState('')
+  const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = React.useState(false)
 
-  useEffect(() => {
+  React.useEffect(() => {
     const loadData = async () => {
-      const loadedData = await window.electron.loadData()
-      if (loadedData.privateGroups.length > 0) {
-        setPrivateGroups(loadedData.privateGroups)
+      try {
+        const loadedData = await window.electron.loadData()
+        if (loadedData.privateGroups.length > 0) {
+          setPrivateGroups(loadedData.privateGroups)
+          setSelectedGroupId(loadedData.privateGroups[0].id)
+        }
+      } catch (error) {
+        console.error("Failed to load data:", error)
       }
     }
     loadData()
   }, [])
 
-  useEffect(() => {
-    window.electron.saveData({ privateGroups })
+  React.useEffect(() => {
+    try {
+      window.electron.saveData({ privateGroups })
+    } catch (error) {
+      console.error("Failed to save data:", error)
+    }
   }, [privateGroups])
 
-  const addPrivateGroup = () => {
+  const handleKeyPress = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      action()
+    }
+  }
+
+  const handleAddGroup = (e?: React.FormEvent) => {
+    e?.preventDefault()
     if (newGroupName.trim() !== '') {
       const newGroup: PrivateGroup = {
         id: Date.now().toString(),
@@ -81,20 +105,29 @@ export default function Component() {
         iconName: newGroupIcon,
         tasks: []
       }
-      setPrivateGroups([...privateGroups, newGroup])
+      setPrivateGroups(prevGroups => [...prevGroups, newGroup])
       setNewGroupName('')
       setNewGroupIcon('Home')
     }
   }
 
   const deletePrivateGroup = (groupId: string) => {
-    setPrivateGroups(privateGroups.filter(group => group.id !== groupId))
-    if (selectedGroupId === groupId) {
-      setSelectedGroupId(privateGroups[0].id)
-    }
+    setPrivateGroups(prevGroups => {
+      if (prevGroups.length <= 1) {
+        // Prevent deletion of the last group
+        return prevGroups
+      }
+      const updatedGroups = prevGroups.filter(group => group.id !== groupId)
+      if (selectedGroupId === groupId) {
+        // If the deleted group was selected, select the first available group
+        setSelectedGroupId(updatedGroups[0].id)
+      }
+      return updatedGroups
+    })
   }
 
-  const addTask = () => {
+  const handleAddTask = (e?: React.FormEvent) => {
+    e?.preventDefault()
     if (newTaskTitle.trim() !== '' && newTaskTime.trim() !== '') {
       const newTask: Task = {
         id: Date.now().toString(),
@@ -102,11 +135,13 @@ export default function Component() {
         completed: false,
         time: newTaskTime,
       }
-      setPrivateGroups(privateGroups.map(group => 
-        group.id === selectedGroupId 
-          ? { ...group, tasks: [...group.tasks, newTask] }
-          : group
-      ))
+      setPrivateGroups(prevGroups => 
+        prevGroups.map(group => 
+          group.id === selectedGroupId 
+            ? { ...group, tasks: [...group.tasks, newTask] }
+            : group
+        )
+      )
       setNewTaskTitle('')
       setNewTaskTime('')
       setIsAddTaskDialogOpen(false)
@@ -114,27 +149,31 @@ export default function Component() {
   }
 
   const toggleTask = (taskId: string) => {
-    setPrivateGroups(privateGroups.map(group => 
-      group.id === selectedGroupId
-        ? {
-            ...group,
-            tasks: group.tasks.map(task => 
-              task.id === taskId ? { ...task, completed: !task.completed } : task
-            )
-          }
-        : group
-    ))
+    setPrivateGroups(prevGroups => 
+      prevGroups.map(group => 
+        group.id === selectedGroupId
+          ? {
+              ...group,
+              tasks: group.tasks.map(task => 
+                task.id === taskId ? { ...task, completed: !task.completed } : task
+              )
+            }
+          : group
+      )
+    )
   }
 
   const deleteTask = (taskId: string) => {
-    setPrivateGroups(privateGroups.map(group => 
-      group.id === selectedGroupId
-        ? {
-            ...group,
-            tasks: group.tasks.filter(task => task.id !== taskId)
-          }
-        : group
-    ))
+    setPrivateGroups(prevGroups => 
+      prevGroups.map(group => 
+        group.id === selectedGroupId
+          ? {
+              ...group,
+              tasks: group.tasks.filter(task => task.id !== taskId)
+            }
+          : group
+      )
+    )
   }
 
   const getIconComponent = (iconName: string) => {
@@ -160,7 +199,6 @@ export default function Component() {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar */}
       <div className="w-64 border-r bg-background p-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold">Private</h2>
@@ -183,6 +221,7 @@ export default function Component() {
                     id="group-name"
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
+                    onKeyDown={(e) => handleKeyPress(e, handleAddGroup)}
                     className="col-span-3"
                   />
                 </div>
@@ -205,13 +244,12 @@ export default function Component() {
                   </Select>
                 </div>
               </div>
-              <Button onClick={addPrivateGroup}>Add Group</Button>
+              <Button onClick={handleAddGroup}>Add Group</Button>
             </DialogContent>
           </Dialog>
         </div>
         
         <ScrollArea className="h-[calc(100vh-8rem)]">
-          {/* Private Groups */}
           <div className="space-y-1">
             {privateGroups.map(group => (
               <div key={group.id} className="flex items-center">
@@ -224,21 +262,22 @@ export default function Component() {
                   <span>{group.name}</span>
                   <span className="ml-auto text-muted-foreground">{group.tasks.length}</span>
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deletePrivateGroup(group.id)}
-                  className="ml-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {privateGroups.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deletePrivateGroup(group.id)}
+                    className="ml-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>
         </ScrollArea>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 overflow-auto">
         <div className="p-8">
           <div className="flex justify-between items-center mb-8">
@@ -248,46 +287,46 @@ export default function Component() {
             </div>
           </div>
 
-          {/* Tasks */}
-          <div className="space-y-4">
-            {selectedGroup.tasks.map(task => (
-              <div
-                key={task.id}
-                className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-              >
-                <Checkbox
-                  checked={task.completed}
-                  onCheckedChange={() => toggleTask(task.id)}
-                />
-                <div className="flex-1">
-                  <h3 className={`font-medium transition-all duration-300 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                    {task.title}
-                  </h3>
-                  {task.tag && (
-                    <div className="flex gap-2 mt-1">
-                      <span className="text-sm text-blue-500">{task.tag}</span>
+          {selectedGroup && (
+            <div className="space-y-4">
+              {selectedGroup.tasks.map(task => (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <Checkbox
+                    checked={task.completed}
+                    onCheckedChange={() => toggleTask(task.id)}
+                  />
+                  <div className="flex-1">
+                    <h3 className={`font-medium transition-all duration-300 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                      {task.title}
+                    </h3>
+                    {task.tag && (
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-sm text-blue-500">{task.tag}</span>
+                      </div>
+                    )}
+                  </div>
+                  {task.members && (
+                    <div className="flex -space-x-2">
+                      {task.members.map((member, i) => (
+                        <Avatar key={i} className="border-2 border-background w-8 h-8">
+                          <AvatarImage src="/placeholder.svg" />
+                          <AvatarFallback>U{i}</AvatarFallback>
+                        </Avatar>
+                      ))}
                     </div>
                   )}
+                  <div className="text-sm text-muted-foreground">{task.time}</div>
+                  <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                {task.members && (
-                  <div className="flex -space-x-2">
-                    {task.members.map((member, i) => (
-                      <Avatar key={i} className="border-2 border-background w-8 h-8">
-                        <AvatarImage src="/placeholder.svg" />
-                        <AvatarFallback>U{i}</AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                )}
-                <div className="text-sm text-muted-foreground">{task.time}</div>
-                <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          {/* Create New Task Button */}
           <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
             <DialogTrigger asChild>
               <Button 
@@ -301,7 +340,7 @@ export default function Component() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Task to {selectedGroup.name}</DialogTitle>
+                <DialogTitle>Add New Task to {selectedGroup?.name}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -311,25 +350,26 @@ export default function Component() {
                   <Input
                     id="task-title"
                     value={newTaskTitle}
+                    onKeyDown={(e) => handleKeyPress(e, handleAddTask)}
                     onChange={(e) => setNewTaskTitle(e.target.value)}
                     className="col-span-3"
                   />
                 </div>
 
                 <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="task-time" className="text-right">
-    Time
-  </Label>
-  <div className="col-span-3">
-    <TimePickerComponent
-      onTimeSelect={(time) => setNewTaskTime(time)}
-      defaultValue={newTaskTime}
-    />
-  </div>
-                   </div>
+                  <Label htmlFor="task-time" className="text-right">
+                    Time
+                  </Label>
+                  <div className="col-span-3">
+                    <TimePickerComponent
+                      onTimeSelect={(time) => setNewTaskTime(time)}
+                      defaultValue={newTaskTime}
+                    />
                   </div>
+                </div>
+              </div>
 
-              <Button onClick={addTask}>Add Task</Button>
+              <Button onClick={handleAddTask}>Add Task</Button>
             </DialogContent>
           </Dialog>
         </div>
