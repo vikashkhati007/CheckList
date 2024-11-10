@@ -49,6 +49,7 @@ import TimePickerComponent from "./TimePicker"
 import { ModeToggle } from "./Theme"
 import { format } from "date-fns"
 import DueDatePicker from "./DueDatePicker"
+import { cn } from "lib/utils"
 
 
 
@@ -483,7 +484,7 @@ export default function Component() {
             <>
               <div className="mb-4">
                 <h2 className="text-lg font-semibold mb-2">{selectedGroup.name} Progress</h2>
-                <Progress value={groupProgress} className="w-full" />
+                <Progress value={groupProgress}  className={cn('w-full, h-2 [&>*]:bg-green-400')} />
               </div>
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId={selectedGroup.id}>
