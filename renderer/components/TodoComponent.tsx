@@ -12,8 +12,6 @@ import { Calendar } from "./ui/calendar"
 import {
   Home,
   Plus,
-  ChevronLeft,
-  ChevronRight,
   Briefcase,
   Book,
   Car,
@@ -24,6 +22,7 @@ import {
   Flag,
   Filter,
   SortAsc,
+  AlertCircle
 } from "lucide-react"
 import {
   Dialog,
@@ -49,9 +48,8 @@ import TimePickerComponent from "./TimePicker"
 import { ModeToggle } from "./Theme"
 import { format } from "date-fns"
 import DueDatePicker from "./DueDatePicker"
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
 import { cn } from "lib/utils"
-
-
 
 interface Task {
   id: string
@@ -70,7 +68,6 @@ interface PrivateGroup {
   iconName: string
   tasks: Task[]
 }
-
 
 declare global {
   interface Window {
@@ -97,6 +94,7 @@ export default function Component() {
   const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = React.useState(false)
   const [filterPriority, setFilterPriority] = React.useState<'low' | 'medium' | 'high' | 'all'>('all')
   const [sortBy, setSortBy] = React.useState<'priority' | 'dueDate' | 'none'>('none')
+  const [showCongratulations, setShowCongratulations] = React.useState(false)
 
   React.useEffect(() => {
     const loadData = async () => {
@@ -113,6 +111,10 @@ export default function Component() {
     loadData()
   }, [])
 
+  const selectedGroup =
+  privateGroups.find((group) => group.id === selectedGroupId) ||
+  privateGroups[0]
+
   React.useEffect(() => {
     try {
       window.electron.saveData({ privateGroups })
@@ -120,6 +122,17 @@ export default function Component() {
       console.error("Failed to save data:", error)
     }
   }, [privateGroups])
+
+  React.useEffect(() => {
+    if (selectedGroup && selectedGroup.tasks.length > 0) {
+      const allTasksCompleted = selectedGroup.tasks.every(task => task.completed)
+      if (allTasksCompleted) {
+        setShowCongratulations(true)
+        // Hide the alert after 5 seconds
+        setTimeout(() => setShowCongratulations(false), 5000)
+      }
+    }
+  }, [selectedGroup])
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) {
@@ -185,8 +198,8 @@ export default function Component() {
         title: newTaskTitle,
         completed: false,
         time: newTaskTime,
-        priority: newTaskPriority,  // Include priority
-        dueDate: newTaskDueDate,    // Include due date
+        priority: newTaskPriority,
+        dueDate: newTaskDueDate,
       }
       setPrivateGroups((prevGroups) =>
         prevGroups.map((group) =>
@@ -195,14 +208,14 @@ export default function Component() {
             : group
         )
       )
-      // Reset all form fields
       setNewTaskTitle("")
       setNewTaskTime("")
-      setNewTaskPriority('medium')  // Reset priority to default
-      setNewTaskDueDate(null)       // Reset due date
+      setNewTaskPriority('medium')
+      setNewTaskDueDate(null)
       setIsAddTaskDialogOpen(false)
     }
   }
+
   const toggleTask = (taskId: string) => {
     setPrivateGroups((prevGroups) =>
       prevGroups.map((group) =>
@@ -262,30 +275,6 @@ export default function Component() {
     }
   }
 
-  const addChecklistItem = (taskId: string, itemText: string) => {
-    setPrivateGroups((prevGroups) =>
-      prevGroups.map((group) =>
-        group.id === selectedGroupId
-          ? {
-              ...group,
-              tasks: group.tasks.map((task) =>
-                task.id === taskId
-                  ? {
-                      ...task,
-                      checklist: [
-                        { id: Date.now().toString(), text: itemText, completed: false },
-                      ],
-                    }
-                  : task
-              ),
-            }
-          : group
-      )
-    )
-  }
-
- 
-
   const getIconComponent = (iconName: string) => {
     switch (iconName) {
       case "Home":
@@ -318,9 +307,7 @@ export default function Component() {
     }
   }
 
-  const selectedGroup =
-    privateGroups.find((group) => group.id === selectedGroupId) ||
-    privateGroups[0]
+
 
   const filteredAndSortedTasks = React.useMemo(() => {
     let tasks = selectedGroup?.tasks || []
@@ -443,7 +430,7 @@ export default function Component() {
       <div className="flex-1 overflow-auto">
         <div className="p-8">
           <div className="flex justify-between items-center mb-8">
-          <div>
+            <div>
               <h1 className="text-xl font-bold mb-1">
                 Good Morning, Vikas! 👋
               </h1>
@@ -480,11 +467,21 @@ export default function Component() {
             </div>
           </div>
 
+          {showCongratulations && (
+            <Alert className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Congratulations!</AlertTitle>
+              <AlertDescription>
+                You've completed all tasks in this group. Great job!
+              </AlertDescription>
+            </Alert>
+          )}
+
           {selectedGroup && (
             <>
               <div className="mb-4">
                 <h2 className="text-lg font-semibold mb-2">{selectedGroup.name} Progress</h2>
-                <Progress value={groupProgress}  className={cn('w-full, h-2 [&>*]:bg-green-400')} />
+                <Progress value={groupProgress} className={cn('w-full h-2 [&>*]:bg-green-400')} />
               </div>
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId={selectedGroup.id}>
@@ -495,81 +492,81 @@ export default function Component() {
                       className="space-y-4"
                     >
                       {filteredAndSortedTasks.map((task, index) => (
-      <Draggable key={task.id} draggableId={task.id} index={index}>
-        {(provided) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-          >
-            <Checkbox
-              checked={task.completed}
-              onCheckedChange={() => toggleTask(task.id)}
-            />
-            <div className="flex-1">
-              <h3
-                className={`font-medium transition-all duration-300 ${
-                  task.completed
-                    ? "line-through text-muted-foreground"
-                    : ""
-                }`}
-              >
-                {task.title}
-              </h3>
-              {task.tag && (
-                <div className="flex gap-2 mt-1">
-                  <span className="text-sm text-blue-500">
-                    {task.tag}
-                  </span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 mt-1">
-                <Flag className={`w-4 h-4 ${getPriorityColor(task.priority)}`} />
-                <span className="text-sm text-muted-foreground">
-                  {task.priority}
-                </span>
-                {task.dueDate && (
-                  <span className="text-sm text-muted-foreground">
-                    Due: {format(task.dueDate, 'MMM d, yyyy')}
-                  </span>
-                )}
-              </div>
-            </div>
-            {task.members && (
-              <div className="flex -space-x-2">
-                {task.members.map((member, i) => (
-                  <Avatar
-                    key={i}
-                    className="border-2 border-background w-8 h-8"
-                  >
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback>U{i}</AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
-            )}
-            <div className="text-sm text-muted-foreground">
-              {task.time}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => editTask(task)}
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => deleteTask(task.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </Draggable>
-    ))}
+                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                          {(provided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                            >
+                              <Checkbox
+                                checked={task.completed}
+                                onCheckedChange={() => toggleTask(task.id)}
+                              />
+                              <div className="flex-1">
+                                <h3
+                                  className={`font-medium transition-all duration-300 ${
+                                    task.completed
+                                      ? "line-through text-muted-foreground"
+                                      : ""
+                                  }`}
+                                >
+                                  {task.title}
+                                </h3>
+                                {task.tag && (
+                                  <div className="flex gap-2 mt-1">
+                                    <span className="text-sm text-blue-500">
+                                      {task.tag}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Flag className={`w-4 h-4 ${getPriorityColor(task.priority)}`} />
+                                  <span className="text-sm text-muted-foreground">
+                                    {task.priority}
+                                  </span>
+                                  {task.dueDate && (
+                                    <span className="text-sm text-muted-foreground">
+                                      Due: {format(task.dueDate, 'MMM d, yyyy')}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {task.members && (
+                                <div className="flex -space-x-2">
+                                  {task.members.map((member, i) => (
+                                    <Avatar
+                                      key={i}
+                                      className="border-2 border-background w-8 h-8"
+                                    >
+                                      <AvatarImage src="/placeholder.svg" />
+                                      <AvatarFallback>U{i}</AvatarFallback>
+                                    </Avatar>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="text-sm text-muted-foreground">
+                                {task.time}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => editTask(task)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => deleteTask(task.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
                       {provided.placeholder}
                     </div>
                   )}
@@ -733,9 +730,12 @@ export default function Component() {
                   <Label htmlFor="edit-task-due-date" className="text-right">
                     Due Date
                   </Label>
-               <DueDatePicker date={editingTask?.dueDate} onDateChange={(date) => setEditingTask((prev) =>
-        prev ? { ...prev, dueDate: date } : null
-      )}/>
+                  <DueDatePicker 
+                    date={editingTask?.dueDate} 
+                    onDateChange={(date) => setEditingTask((prev) =>
+                      prev ? { ...prev, dueDate: date } : null
+                    )}
+                  />
                 </div>
               </div>
               <Button onClick={handleEditTask}>Save Changes</Button>
