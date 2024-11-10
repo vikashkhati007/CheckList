@@ -6,7 +6,7 @@ export default function HomePage() {
   return (
     <React.Fragment>
       <Head>
-        <title>Home - Nextron (with-tailwindcss)</title>
+        <title>Todo App - By @vikashkhati007</title>
       </Head>
       <TodoComponents/>
     </React.Fragment>
