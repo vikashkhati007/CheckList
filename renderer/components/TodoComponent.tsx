@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import TimePickerComponent from './TimePicker'
+import { ModeToggle } from './Theme'
 
 interface Task {
   id: string
@@ -276,6 +277,9 @@ export default function Component() {
             ))}
           </div>
         </ScrollArea>
+        <div >
+          <ModeToggle/>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto">
