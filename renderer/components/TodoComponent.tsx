@@ -1,6 +1,7 @@
 'use client'
 
-import * as React from 'react'
+import * as React from "react"
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import { Button } from "./ui/button"
 import { ScrollArea } from "./ui/scrollarea"
@@ -19,33 +20,24 @@ import {
   Trash2,
   Edit2,
 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog"
 import { Label } from "./ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import TimePickerComponent from './TimePicker'
-import { ModeToggle } from './Theme'
-
-interface Task {
-  id: string
-  title: string
-  completed: boolean
-  time: string
-  project?: string
-  tag?: string
-  members?: string[]
-}
-
-interface PrivateGroup {
-  id: string
-  name: string
-  iconName: string
-  tasks: Task[]
-}
-
-interface TimePickerProps {
-  onTimeSelect: (time: string) => void
-  defaultValue?: string
-}
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select"
+import TimePickerComponent from "./TimePicker"
+import { ModeToggle } from "./Theme"
+import { currentDate, PrivateGroup, Task } from "types/TodoComponetsProps"
 
 declare global {
   interface Window {
@@ -58,172 +50,204 @@ declare global {
 
 export default function Component() {
   const [privateGroups, setPrivateGroups] = React.useState<PrivateGroup[]>([
-    { id: '1', name: 'Home', iconName: 'Home', tasks: [] }
+    { id: "1", name: "Home", iconName: "Home", tasks: [] },
   ])
-  const [selectedGroupId, setSelectedGroupId] = React.useState('1')
-  const [newGroupName, setNewGroupName] = React.useState('')
-  const [newGroupIcon, setNewGroupIcon] = React.useState('Home')
-  const [newTaskTitle, setNewTaskTitle] = React.useState('')
-  const [newTaskTime, setNewTaskTime] = React.useState('')
+  const [selectedGroupId, setSelectedGroupId] = React.useState("1")
+  const [newGroupName, setNewGroupName] = React.useState("")
+  const [newGroupIcon, setNewGroupIcon] = React.useState("Home")
+  const [newTaskTitle, setNewTaskTitle] = React.useState("")
+  const [newTaskTime, setNewTaskTime] = React.useState("")
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = React.useState(false)
   const [editingTask, setEditingTask] = React.useState<Task | null>(null)
   const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = React.useState(false)
 
-  React.useEffect(() => {
+
+React.useEffect(() => {
     const loadData = async () => {
       try {
-        const loadedData = await window.electron.loadData()
+        const loadedData = await window.electron.loadData();
         if (loadedData.privateGroups.length > 0) {
-          setPrivateGroups(loadedData.privateGroups)
-          setSelectedGroupId(loadedData.privateGroups[0].id)
+          setPrivateGroups(loadedData.privateGroups);
+          setSelectedGroupId(loadedData.privateGroups[0].id);
         }
       } catch (error) {
-        console.error("Failed to load data:", error)
+        console.error("Failed to load data:", error);
       }
-    }
-    loadData()
-  }, [])
+    };
+    loadData();
+  }, []);
 
   React.useEffect(() => {
     try {
-      window.electron.saveData({ privateGroups })
+      window.electron.saveData({ privateGroups });
     } catch (error) {
-      console.error("Failed to save data:", error)
+      console.error("Failed to save data:", error);
     }
-  }, [privateGroups])
+  }, [privateGroups]);
 
-  const handleKeyPress = (e: React.KeyboardEvent, action: () => void) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      action()
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) {
+      return
     }
+
+    const sourceIndex = result.source.index
+    const destinationIndex = result.destination.index
+
+    setPrivateGroups((prevGroups) =>
+      prevGroups.map((group) => {
+        if (group.id === selectedGroupId) {
+          const newTasks = Array.from(group.tasks)
+          const [reorderedItem] = newTasks.splice(sourceIndex, 1)
+          newTasks.splice(destinationIndex, 0, reorderedItem)
+          return { ...group, tasks: newTasks }
+        }
+        return group
+      })
+    )
   }
 
+
+
+  const handleKeyPress = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      action();
+    }
+  };
+
   const handleAddGroup = (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (newGroupName.trim() !== '') {
+    e?.preventDefault();
+    if (newGroupName.trim() !== "") {
       const newGroup: PrivateGroup = {
         id: Date.now().toString(),
         name: newGroupName,
         iconName: newGroupIcon,
-        tasks: []
-      }
-      setPrivateGroups(prevGroups => [...prevGroups, newGroup])
-      setNewGroupName('')
-      setNewGroupIcon('Home')
+        tasks: [],
+      };
+      setPrivateGroups((prevGroups) => [...prevGroups, newGroup]);
+      setNewGroupName("");
+      setNewGroupIcon("Home");
     }
-  }
+  };
 
   const deletePrivateGroup = (groupId: string) => {
-    setPrivateGroups(prevGroups => {
+    setPrivateGroups((prevGroups) => {
       if (prevGroups.length <= 1) {
         // Prevent deletion of the last group
-        return prevGroups
+        return prevGroups;
       }
-      const updatedGroups = prevGroups.filter(group => group.id !== groupId)
+      const updatedGroups = prevGroups.filter((group) => group.id !== groupId);
       if (selectedGroupId === groupId) {
         // If the deleted group was selected, select the first available group
-        setSelectedGroupId(updatedGroups[0].id)
+        setSelectedGroupId(updatedGroups[0].id);
       }
-      return updatedGroups
-    })
-  }
+      return updatedGroups;
+    });
+  };
 
   const handleAddTask = (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (newTaskTitle.trim() !== '' && newTaskTime.trim() !== '') {
+    e?.preventDefault();
+    if (newTaskTitle.trim() !== "" && newTaskTime.trim() !== "") {
       const newTask: Task = {
         id: Date.now().toString(),
         title: newTaskTitle,
         completed: false,
         time: newTaskTime,
-      }
-      setPrivateGroups(prevGroups => 
-        prevGroups.map(group => 
-          group.id === selectedGroupId 
+      };
+      setPrivateGroups((prevGroups) =>
+        prevGroups.map((group) =>
+          group.id === selectedGroupId
             ? { ...group, tasks: [...group.tasks, newTask] }
             : group
         )
-      )
-      setNewTaskTitle('')
-      setNewTaskTime('')
-      setIsAddTaskDialogOpen(false)
+      );
+      setNewTaskTitle("");
+      setNewTaskTime("");
+      setIsAddTaskDialogOpen(false);
     }
-  }
+  };
 
   const toggleTask = (taskId: string) => {
-    setPrivateGroups(prevGroups => 
-      prevGroups.map(group => 
+    setPrivateGroups((prevGroups) =>
+      prevGroups.map((group) =>
         group.id === selectedGroupId
           ? {
               ...group,
-              tasks: group.tasks.map(task => 
-                task.id === taskId ? { ...task, completed: !task.completed } : task
-              )
+              tasks: group.tasks.map((task) =>
+                task.id === taskId
+                  ? { ...task, completed: !task.completed }
+                  : task
+              ),
             }
           : group
       )
-    )
-  }
+    );
+  };
 
   const deleteTask = (taskId: string) => {
-    setPrivateGroups(prevGroups => 
-      prevGroups.map(group => 
+    setPrivateGroups((prevGroups) =>
+      prevGroups.map((group) =>
         group.id === selectedGroupId
           ? {
               ...group,
-              tasks: group.tasks.filter(task => task.id !== taskId)
+              tasks: group.tasks.filter((task) => task.id !== taskId),
             }
           : group
       )
-    )
-  }
+    );
+  };
 
   const editTask = (task: Task) => {
-    setEditingTask(task)
-    setIsEditTaskDialogOpen(true)
-  }
+    setEditingTask(task);
+    setIsEditTaskDialogOpen(true);
+  };
 
   const handleEditTask = (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (editingTask && editingTask.title.trim() !== '' && editingTask.time.trim() !== '') {
-      setPrivateGroups(prevGroups => 
-        prevGroups.map(group => 
+    e?.preventDefault();
+    if (
+      editingTask &&
+      editingTask.title.trim() !== "" &&
+      editingTask.time.trim() !== ""
+    ) {
+      setPrivateGroups((prevGroups) =>
+        prevGroups.map((group) =>
           group.id === selectedGroupId
             ? {
                 ...group,
-                tasks: group.tasks.map(task => 
+                tasks: group.tasks.map((task) =>
                   task.id === editingTask.id ? editingTask : task
-                )
+                ),
               }
             : group
         )
-      )
-      setIsEditTaskDialogOpen(false)
-      setEditingTask(null)
+      );
+      setIsEditTaskDialogOpen(false);
+      setEditingTask(null);
     }
-  }
+  };
 
   const getIconComponent = (iconName: string) => {
     switch (iconName) {
-      case 'Home': return <Home className="w-4 h-4" />;
-      case 'Briefcase': return <Briefcase className="w-4 h-4" />;
-      case 'Book': return <Book className="w-4 h-4" />;
-      case 'Car': return <Car className="w-4 h-4" />;
-      case 'User': return <User className="w-4 h-4" />;
-      case 'Utensils': return <Utensils className="w-4 h-4" />;
-      default: return <Home className="w-4 h-4" />;
+      case "Home":
+        return <Home className="w-4 h-4" />;
+      case "Briefcase":
+        return <Briefcase className="w-4 h-4" />;
+      case "Book":
+        return <Book className="w-4 h-4" />;
+      case "Car":
+        return <Car className="w-4 h-4" />;
+      case "User":
+        return <User className="w-4 h-4" />;
+      case "Utensils":
+        return <Utensils className="w-4 h-4" />;
+      default:
+        return <Home className="w-4 h-4" />;
     }
-  }
-
-  const selectedGroup = privateGroups.find(group => group.id === selectedGroupId) || privateGroups[0]
-
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  })
+  };
+  const selectedGroup =
+    privateGroups.find((group) => group.id === selectedGroupId) ||
+    privateGroups[0]
 
   return (
     <div className="flex h-screen bg-background">
@@ -257,7 +281,10 @@ export default function Component() {
                   <Label htmlFor="group-icon" className="text-right">
                     Icon
                   </Label>
-                  <Select onValueChange={(value) => setNewGroupIcon(value)} defaultValue="Home">
+                  <Select
+                    onValueChange={(value) => setNewGroupIcon(value)}
+                    defaultValue="Home"
+                  >
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Select an icon" />
                     </SelectTrigger>
@@ -276,10 +303,10 @@ export default function Component() {
             </DialogContent>
           </Dialog>
         </div>
-        
+
         <ScrollArea className="h-[calc(100vh-8rem)]">
           <div className="space-y-1">
-            {privateGroups.map(group => (
+            {privateGroups.map((group) => (
               <div key={group.id} className="flex items-center">
                 <Button
                   variant={group.id === selectedGroupId ? "secondary" : "ghost"}
@@ -288,7 +315,9 @@ export default function Component() {
                 >
                   {getIconComponent(group.iconName)}
                   <span>{group.name}</span>
-                  <span className="ml-auto text-muted-foreground">{group.tasks.length}</span>
+                  <span className="ml-auto text-muted-foreground">
+                    {group.tasks.length}
+                  </span>
                 </Button>
                 {privateGroups.length > 1 && (
                   <Button
@@ -304,8 +333,8 @@ export default function Component() {
             ))}
           </div>
         </ScrollArea>
-        <div >
-          <ModeToggle/>
+        <div>
+          <ModeToggle />
         </div>
       </div>
 
@@ -313,58 +342,101 @@ export default function Component() {
         <div className="p-8">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-2xl font-bold mb-1">Good Morning, Vikas! 👋</h1>
+              <h1 className="text-2xl font-bold mb-1">
+                Good Morning, Vikas! 👋
+              </h1>
               <p className="text-muted-foreground">Today, {currentDate}</p>
             </div>
           </div>
 
           {selectedGroup && (
-            <div className="space-y-4">
-              {selectedGroup.tasks.map(task => (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  <Checkbox
-                    checked={task.completed}
-                    onCheckedChange={() => toggleTask(task.id)}
-                  />
-                  <div className="flex-1">
-                    <h3 className={`font-medium transition-all duration-300 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                      {task.title}
-                    </h3>
-                    {task.tag && (
-                      <div className="flex gap-2 mt-1">
-                        <span className="text-sm text-blue-500">{task.tag}</span>
-                      </div>
-                    )}
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId={selectedGroup.id}>
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-4"
+                  >
+                    {selectedGroup.tasks.map((task, index) => (
+                      <Draggable key={task.id} draggableId={task.id} index={index}>
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                          >
+                            <Checkbox
+                              checked={task.completed}
+                              onCheckedChange={() => toggleTask(task.id)}
+                            />
+                            <div className="flex-1">
+                              <h3
+                                className={`font-medium transition-all duration-300 ${
+                                  task.completed
+                                    ? "line-through text-muted-foreground"
+                                    : ""
+                                }`}
+                              >
+                                {task.title}
+                              </h3>
+                              {task.tag && (
+                                <div className="flex gap-2 mt-1">
+                                  <span className="text-sm text-blue-500">
+                                    {task.tag}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            {task.members && (
+                              <div className="flex -space-x-2">
+                                {task.members.map((member, i) => (
+                                  <Avatar
+                                    key={i}
+                                    className="border-2 border-background w-8 h-8"
+                                  >
+                                    <AvatarImage src="/placeholder.svg" />
+                                    <AvatarFallback>U{i}</AvatarFallback>
+                                  </Avatar>
+                                ))}
+                              </div>
+                            )}
+                            <div className="text-sm text-muted-foreground">
+                              {task.time}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => editTask(task)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteTask(task.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
                   </div>
-                  {task.members && (
-                    <div className="flex -space-x-2">
-                      {task.members.map((member, i) => (
-                        <Avatar key={i} className="border-2 border-background w-8 h-8">
-                          <AvatarImage src="/placeholder.svg" />
-                          <AvatarFallback>U{i}</AvatarFallback>
-                        </Avatar>
-                      ))}
-                    </div>
-                  )}
-                  <div className="text-sm text-muted-foreground">{task.time}</div>
-                  <Button variant="ghost" size="icon" onClick={() => editTask(task)}>
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           )}
 
-        <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
+          <Dialog
+            open={isAddTaskDialogOpen}
+            onOpenChange={setIsAddTaskDialogOpen}
+          >
             <DialogTrigger asChild>
-              <Button 
-                className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full px-8" 
+              <Button
+                className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full px-8"
                 variant="default"
                 onClick={() => setIsAddTaskDialogOpen(true)}
               >
@@ -406,7 +478,10 @@ export default function Component() {
               <Button onClick={handleAddTask}>Add Task</Button>
             </DialogContent>
           </Dialog>
-          <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
+          <Dialog
+            open={isEditTaskDialogOpen}
+            onOpenChange={setIsEditTaskDialogOpen}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Edit Task</DialogTitle>
@@ -418,8 +493,12 @@ export default function Component() {
                   </Label>
                   <Input
                     id="edit-task-title"
-                    value={editingTask?.title || ''}
-                    onChange={(e) => setEditingTask(prev => prev ? {...prev, title: e.target.value} : null)}
+                    value={editingTask?.title || ""}
+                    onChange={(e) =>
+                      setEditingTask((prev) =>
+                        prev ? { ...prev, title: e.target.value } : null
+                      )
+                    }
                     className="col-span-3"
                   />
                 </div>
@@ -430,7 +509,11 @@ export default function Component() {
                   </Label>
                   <div className="col-span-3">
                     <TimePickerComponent
-                      onTimeSelect={(time) => setEditingTask(prev => prev ? {...prev, time} : null)}
+                      onTimeSelect={(time) =>
+                        setEditingTask((prev) =>
+                          prev ? { ...prev, time } : null
+                        )
+                      }
                       defaultValue={editingTask?.time}
                     />
                   </div>
@@ -440,8 +523,8 @@ export default function Component() {
               <Button onClick={handleEditTask}>Save Changes</Button>
             </DialogContent>
           </Dialog>
-          <Button 
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full px-8" 
+          <Button
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full px-8"
             variant="default"
             onClick={() => setIsAddTaskDialogOpen(true)}
           >
@@ -451,5 +534,5 @@ export default function Component() {
         </div>
       </div>
     </div>
-  )
+  );
 }
