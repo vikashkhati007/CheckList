@@ -17,6 +17,7 @@ import {
   User,
   Utensils,
   Trash2,
+  Edit2,
 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Label } from "./ui/label"
@@ -55,7 +56,6 @@ declare global {
   }
 }
 
-
 export default function Component() {
   const [privateGroups, setPrivateGroups] = React.useState<PrivateGroup[]>([
     { id: '1', name: 'Home', iconName: 'Home', tasks: [] }
@@ -66,6 +66,8 @@ export default function Component() {
   const [newTaskTitle, setNewTaskTitle] = React.useState('')
   const [newTaskTime, setNewTaskTime] = React.useState('')
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = React.useState(false)
+  const [editingTask, setEditingTask] = React.useState<Task | null>(null)
+  const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = React.useState(false)
 
   React.useEffect(() => {
     const loadData = async () => {
@@ -175,6 +177,31 @@ export default function Component() {
           : group
       )
     )
+  }
+
+  const editTask = (task: Task) => {
+    setEditingTask(task)
+    setIsEditTaskDialogOpen(true)
+  }
+
+  const handleEditTask = (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (editingTask && editingTask.title.trim() !== '' && editingTask.time.trim() !== '') {
+      setPrivateGroups(prevGroups => 
+        prevGroups.map(group => 
+          group.id === selectedGroupId
+            ? {
+                ...group,
+                tasks: group.tasks.map(task => 
+                  task.id === editingTask.id ? editingTask : task
+                )
+              }
+            : group
+        )
+      )
+      setIsEditTaskDialogOpen(false)
+      setEditingTask(null)
+    }
   }
 
   const getIconComponent = (iconName: string) => {
@@ -323,6 +350,9 @@ export default function Component() {
                     </div>
                   )}
                   <div className="text-sm text-muted-foreground">{task.time}</div>
+                  <Button variant="ghost" size="icon" onClick={() => editTask(task)}>
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => deleteTask(task.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -331,7 +361,7 @@ export default function Component() {
             </div>
           )}
 
-          <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
+        <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
             <DialogTrigger asChild>
               <Button 
                 className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full px-8" 
@@ -376,6 +406,48 @@ export default function Component() {
               <Button onClick={handleAddTask}>Add Task</Button>
             </DialogContent>
           </Dialog>
+          <Dialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Task</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-task-title" className="text-right">
+                    Title
+                  </Label>
+                  <Input
+                    id="edit-task-title"
+                    value={editingTask?.title || ''}
+                    onChange={(e) => setEditingTask(prev => prev ? {...prev, title: e.target.value} : null)}
+                    className="col-span-3"
+                  />
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-task-time" className="text-right">
+                    Time
+                  </Label>
+                  <div className="col-span-3">
+                    <TimePickerComponent
+                      onTimeSelect={(time) => setEditingTask(prev => prev ? {...prev, time} : null)}
+                      defaultValue={editingTask?.time}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button onClick={handleEditTask}>Save Changes</Button>
+            </DialogContent>
+          </Dialog>
+          <Button 
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full px-8" 
+            variant="default"
+            onClick={() => setIsAddTaskDialogOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create new task
+          </Button>
         </div>
       </div>
     </div>
