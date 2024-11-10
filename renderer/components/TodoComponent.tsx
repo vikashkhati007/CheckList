@@ -654,11 +654,13 @@ export default function Component() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
+                      <div className="w-full">
                       <Calendar
                         mode="single"
                         selected={newTaskDueDate}
                         onSelect={setNewTaskDueDate}
                       />
+                      </div>
                     </PopoverContent>
                   </Popover>
                 </div>
