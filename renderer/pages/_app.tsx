@@ -3,8 +3,6 @@ import '../styles/globals.css'
 import type { AppProps } from 'next/app'
 import { myFont } from 'lib/fonts'
 
-
-
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider

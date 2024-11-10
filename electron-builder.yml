@@ -1,6 +1,6 @@
-appId: com.example.nextron-todo-app
-productName: Nextron Todo App
-copyright: Copyright © 2023 Your Name
+appId: com.checklist.vk
+productName: CheckList App
+copyright: Copyright © 2023 VK - @vikashkhati007
 directories:
   output: dist
   buildResources: resources
